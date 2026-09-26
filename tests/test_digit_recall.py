@@ -200,6 +200,12 @@ class DigitRecallTests(unittest.TestCase):
         self.assertIn("three chances", self.html.lower())
         self.assertIn('id="share-button"', self.html)
         self.assertIn("@media (max-width: 520px)", self.html)
+        self.assertIn('<meta name="theme-color" content="#fff8ec">', self.html)
+        self.assertIn("color-scheme: light;", self.html)
+        self.assertIn("--bg: #fff8ec;", self.html)
+        self.assertIn(".stat:nth-child(1)", self.html)
+        self.assertIn(".stats { gap: 7px; padding: 10px; }", self.html)
+        self.assertIn(">Play now</button>", self.html)
         structured_data = re.search(
             r'<script type="application/ld\+json">\s*(.*?)\s*</script>',
             self.html,
