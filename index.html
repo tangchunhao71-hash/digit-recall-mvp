@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10131d">
-  <meta name="description" content="Train your memory with Digit Recall, a free online number memory game. Memorize each sequence, beat your best score, and see how many digits you can recall.">
+  <meta name="description" content="Train your memory with Digit Recall, a free online number memory game. Memorize each sequence, use three chances, and see how many digits you can recall.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Digit Recall — Free Number Memory Game">
-  <meta property="og:description" content="How many digits can you remember? Play this free memory training game in your browser.">
+  <meta property="og:description" content="How many digits can you remember? You get three chances in this free browser memory game.">
   <title>Digit Recall — Free Number Memory Game</title>
   <script type="application/ld+json">
     {
@@ -16,7 +16,7 @@
       "name": "Digit Recall",
       "applicationCategory": "GameApplication",
       "operatingSystem": "Any",
-      "description": "A free browser-based number memory game. Memorize an increasing sequence of digits and beat your best score.",
+      "description": "A free browser-based number memory game. Memorize an increasing sequence of digits, use three chances, and beat your best score.",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
     }
   </script>
@@ -53,7 +53,7 @@
     h1 { margin: 9px 0 8px; font-size: clamp(2rem, 7vw, 3.3rem); letter-spacing: -.06em; line-height: 1.05; }
     .intro p { max-width: 490px; margin: 0 auto; color: var(--muted); line-height: 1.6; }
     .game-card { overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: var(--panel); box-shadow: 0 24px 80px rgba(0, 0, 0, .3); backdrop-filter: blur(14px); }
-    .stats { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
     .stat { padding: 17px 22px; }
     .stat + .stat { border-left: 1px solid var(--line); }
     .stat-label { display: block; margin-bottom: 3px; color: var(--muted); font-size: .73rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
@@ -73,6 +73,7 @@
     button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
     button:disabled { cursor: wait; filter: saturate(.55); opacity: .7; transform: none; }
     .primary { min-width: 174px; min-height: 54px; margin-top: 6px; }
+    .share-button { min-height: 46px; margin-top: 10px; padding: 0 18px; border: 1px solid var(--line); color: var(--text); background: var(--panel-light); }
     .hint { min-height: 21px; margin: 12px 0 0; color: var(--muted); font-size: .84rem; }
     .hint.error { color: var(--danger); }
     .hidden { display: none !important; }
@@ -115,6 +116,7 @@
         <div class="stats" aria-label="Game statistics">
           <div class="stat"><span class="stat-label">Score</span><span class="stat-value" id="score">0</span></div>
           <div class="stat"><span class="stat-label">Personal best</span><span class="stat-value" id="best">0</span></div>
+          <div class="stat"><span class="stat-label">Chances</span><span class="stat-value" id="chances" aria-label="3 chances remaining">3 / 3</span></div>
         </div>
         <div class="play-area">
           <p class="phase" id="phase" aria-live="polite">Ready when you are.</p>
@@ -126,14 +128,15 @@
             <button type="submit" id="submit-button">Check answer</button>
           </form>
           <button class="primary" id="start-button" type="button">Start game</button>
-          <p class="hint" id="hint" aria-live="polite">You’ll start with 3 digits. No rush between rounds.</p>
+          <p class="hint" id="hint" aria-live="polite">Start with 3 digits. You have three chances for the whole run.</p>
+          <button class="share-button hidden" id="share-button" type="button">Challenge a friend</button>
         </div>
       </section>
 
       <section class="info-grid" aria-label="Game information">
         <article class="info-card">
           <h2>How to play</h2>
-          <p>Memorize the digits while they’re on screen. When they disappear, enter the sequence and submit. A correct answer takes you to the next level.</p>
+          <p>Memorize the digits while they’re on screen. Enter the sequence after it disappears. Each correct answer adds one digit; a miss costs one of your three chances, and you can retry that level.</p>
         </article>
         <article class="info-card">
           <h2>Train your memory</h2>
@@ -148,6 +151,7 @@
       const $ = (id) => document.getElementById(id);
       const scoreEl = $('score');
       const bestEl = $('best');
+      const chancesEl = $('chances');
       const phaseEl = $('phase');
       const sequenceEl = $('sequence');
       const timer = $('timer');
@@ -156,9 +160,12 @@
       const answerInput = $('answer');
       const startButton = $('start-button');
       const submitButton = $('submit-button');
+      const shareButton = $('share-button');
       const hintEl = $('hint');
       const bestKey = 'digit-recall-best-v1';
+      const maxChances = 3;
       let score = 0;
+      let chances = maxChances;
       let currentSequence = '';
       let roundTimer = null;
       let isShowing = false;
@@ -173,6 +180,17 @@
       function setScore(value) {
         score = value;
         scoreEl.textContent = score;
+        if (score > best) {
+          best = score;
+          bestEl.textContent = best;
+          try { localStorage.setItem(bestKey, String(best)); } catch { /* Storage may be unavailable. */ }
+        }
+      }
+
+      function setChances(value) {
+        chances = value;
+        chancesEl.textContent = `${chances} / ${maxChances}`;
+        chancesEl.setAttribute('aria-label', `${chances} chance${chances === 1 ? '' : 's'} remaining`);
       }
 
       function makeSequence(length) {
@@ -232,13 +250,42 @@
         hintEl.textContent = `The sequence was ${currentSequence}. You recalled ${score} round${score === 1 ? '' : 's'}.`;
         startButton.textContent = 'Play again';
         startButton.classList.remove('hidden');
+        shareButton.classList.remove('hidden');
         startButton.focus({ preventScroll: true });
       }
+
+      async function shareResult() {
+        const url = window.location.href.split('#')[0];
+        const result = `I recalled ${score} round${score === 1 ? '' : 's'} in Digit Recall. Can you beat me?`;
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: 'Digit Recall challenge', text: result, url });
+            hintEl.textContent = 'Challenge shared. See if your friend can beat your score!';
+            return;
+          } catch (error) {
+            if (error.name === 'AbortError') return;
+          }
+        }
+        if (navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(`${result} ${url}`);
+            hintEl.textContent = 'Result and game link copied. Share them with a friend!';
+            return;
+          } catch { /* Use the manual copy prompt when clipboard access is unavailable. */ }
+        }
+        window.prompt('Copy and share your result:', `${result} ${url}`);
+        hintEl.textContent = 'Share your result and challenge a friend to beat it.';
+      }
+
+      shareButton.addEventListener('click', shareResult);
 
       startButton.addEventListener('click', () => {
         hintEl.classList.remove('error');
         hintEl.textContent = 'Get ready…';
         setScore(0);
+        setChances(maxChances);
+        shareButton.classList.add('hidden');
+        startButton.classList.add('hidden');
         startButton.disabled = true;
         window.setTimeout(() => {
           startButton.disabled = false;
@@ -258,17 +305,23 @@
         }
         hintEl.classList.remove('error');
         if (answer !== currentSequence) {
-          endGame();
+          setChances(chances - 1);
+          if (chances === 0) {
+            endGame();
+            return;
+          }
+          phaseEl.textContent = 'Not quite — this level is still yours';
+          hintEl.textContent = `That sequence was ${currentSequence}. ${chances} chance${chances === 1 ? '' : 's'} left; the next try stays at ${score + 3} digits.`;
+          form.classList.add('hidden');
+          sequenceEl.classList.remove('is-hidden');
+          sequenceEl.textContent = '↻';
+          sequenceEl.setAttribute('aria-label', 'Try this level again');
+          roundTimer = window.setTimeout(startRound, 1100);
           return;
         }
         setScore(score + 1);
-        if (score > best) {
-          best = score;
-          bestEl.textContent = best;
-          try { localStorage.setItem(bestKey, String(best)); } catch { /* Storage may be unavailable. */ }
-        }
-        phaseEl.textContent = 'Correct! Get ready for the next level…';
-        hintEl.textContent = 'Nice work. The next sequence has one more digit.';
+        phaseEl.textContent = score % 5 === 0 ? `${score}-round streak! Keep it going…` : 'Correct! Get ready for the next level…';
+        hintEl.textContent = score % 5 === 0 ? 'Milestone reached. The next sequence has one more digit.' : 'Nice work. The next sequence has one more digit.';
         form.classList.add('hidden');
         roundTimer = window.setTimeout(startRound, 900);
       });
