@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131d">
+  <meta name="description" content="Train your memory with Digit Recall, a free online number memory game. Memorize each sequence, beat your best score, and see how many digits you can recall.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Digit Recall — Free Number Memory Game">
+  <meta property="og:description" content="How many digits can you remember? Play this free memory training game in your browser.">
+  <title>Digit Recall — Free Number Memory Game</title>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Digit Recall",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Any",
+      "description": "A free browser-based number memory game. Memorize an increasing sequence of digits and beat your best score.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131d;
+      --panel: rgba(25, 29, 43, .88);
+      --panel-light: #202538;
+      --text: #f4f5fb;
+      --muted: #a4abc0;
+      --accent: #a9f078;
+      --accent-ink: #162314;
+      --line: rgba(225, 231, 255, .11);
+      --danger: #ff8792;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(ellipse at 50% -20%, #29334d 0%, transparent 55%), var(--bg);
+    }
+    .wrap { width: min(100% - 32px, 760px); margin: 0 auto; padding: 28px 0 44px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 36px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 750; letter-spacing: -.03em; text-decoration: none; }
+    .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; color: var(--accent-ink); background: var(--accent); font-size: 17px; }
+    .tag { color: var(--muted); font-size: .8rem; }
+    main { display: grid; gap: 22px; }
+    .intro { text-align: center; margin-bottom: 2px; }
+    .eyebrow { color: var(--accent); font-size: .75rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 9px 0 8px; font-size: clamp(2rem, 7vw, 3.3rem); letter-spacing: -.06em; line-height: 1.05; }
+    .intro p { max-width: 490px; margin: 0 auto; color: var(--muted); line-height: 1.6; }
+    .game-card { overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: var(--panel); box-shadow: 0 24px 80px rgba(0, 0, 0, .3); backdrop-filter: blur(14px); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+    .stat { padding: 17px 22px; }
+    .stat + .stat { border-left: 1px solid var(--line); }
+    .stat-label { display: block; margin-bottom: 3px; color: var(--muted); font-size: .73rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .stat-value { font-size: 1.35rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .play-area { display: flex; min-height: 310px; flex-direction: column; align-items: center; justify-content: center; padding: 34px 24px 38px; text-align: center; }
+    .phase { min-height: 23px; color: var(--muted); font-size: .92rem; }
+    .sequence { min-height: 82px; display: flex; align-items: center; justify-content: center; margin: 14px 0; color: var(--accent); font-size: clamp(2.8rem, 11vw, 5.3rem); font-weight: 800; letter-spacing: .17em; font-variant-numeric: tabular-nums; }
+    .sequence.is-hidden { color: #737b91; letter-spacing: .22em; }
+    .timer { width: min(100%, 340px); height: 5px; overflow: hidden; margin: 0 auto 22px; border-radius: 99px; background: rgba(255,255,255,.09); }
+    .timer-fill { width: 100%; height: 100%; transform: scaleX(1); transform-origin: left; border-radius: inherit; background: var(--accent); transition: transform linear; }
+    .entry { display: flex; width: min(100%, 420px); gap: 10px; }
+    input { min-width: 0; flex: 1; height: 54px; padding: 0 16px; border: 1px solid var(--line); border-radius: 14px; outline: none; color: var(--text); background: var(--panel-light); font: inherit; font-size: 1.15rem; letter-spacing: .12em; text-align: center; transition: border-color .18s, box-shadow .18s; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(169, 240, 120, .13); }
+    button { min-height: 50px; border: 0; border-radius: 14px; padding: 0 22px; cursor: pointer; color: var(--accent-ink); background: var(--accent); font: inherit; font-weight: 800; transition: transform .15s, filter .15s; }
+    button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    button:disabled { cursor: wait; filter: saturate(.55); opacity: .7; transform: none; }
+    .primary { min-width: 174px; min-height: 54px; margin-top: 6px; }
+    .hint { min-height: 21px; margin: 12px 0 0; color: var(--muted); font-size: .84rem; }
+    .hint.error { color: var(--danger); }
+    .hidden { display: none !important; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .info-card { padding: 18px 20px; border: 1px solid var(--line); border-radius: 18px; background: rgba(25, 29, 43, .55); }
+    h2 { margin: 0 0 8px; font-size: 1rem; letter-spacing: -.02em; }
+    .info-card p { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.6; }
+    footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 27px; color: var(--muted); font-size: .78rem; }
+    @media (max-width: 520px) {
+      .wrap { width: min(100% - 24px, 760px); padding-top: 19px; }
+      header { margin-bottom: 27px; }
+      .tag { font-size: .72rem; }
+      .game-card { border-radius: 19px; }
+      .play-area { min-height: 290px; padding: 28px 16px 30px; }
+      .stat { padding: 14px 17px; }
+      .entry { flex-direction: column; }
+      .entry button { min-height: 50px; }
+      .info-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; gap: 6px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="#top" aria-label="Digit Recall home"><span class="brand-mark" aria-hidden="true">#</span> Digit Recall</a>
+      <span class="tag">A tiny workout for your brain</span>
+    </header>
+    <main id="top">
+      <section class="intro" aria-labelledby="page-title">
+        <span class="eyebrow">Free memory game</span>
+        <h1 id="page-title">How many digits can you recall?</h1>
+        <p>Focus, memorize the number, then type it from memory. Each round adds one more digit. Keep going and beat your best.</p>
+      </section>
+
+      <section class="game-card" aria-label="Digit Recall game">
+        <div class="stats" aria-label="Game statistics">
+          <div class="stat"><span class="stat-label">Score</span><span class="stat-value" id="score">0</span></div>
+          <div class="stat"><span class="stat-label">Personal best</span><span class="stat-value" id="best">0</span></div>
+        </div>
+        <div class="play-area">
+          <p class="phase" id="phase" aria-live="polite">Ready when you are.</p>
+          <div class="sequence" id="sequence" aria-label="Number sequence">—</div>
+          <div class="timer hidden" id="timer" aria-hidden="true"><div class="timer-fill" id="timer-fill"></div></div>
+          <form class="entry hidden" id="entry-form" autocomplete="off">
+            <label class="hidden" for="answer">Type the number sequence</label>
+            <input id="answer" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="30" placeholder="Type the digits" aria-describedby="hint" aria-label="Type the number sequence from memory">
+            <button type="submit" id="submit-button">Check answer</button>
+          </form>
+          <button class="primary" id="start-button" type="button">Start game</button>
+          <p class="hint" id="hint" aria-live="polite">You’ll start with 3 digits. No rush between rounds.</p>
+        </div>
+      </section>
+
+      <section class="info-grid" aria-label="Game information">
+        <article class="info-card">
+          <h2>How to play</h2>
+          <p>Memorize the digits while they’re on screen. When they disappear, enter the sequence and submit. A correct answer takes you to the next level.</p>
+        </article>
+        <article class="info-card">
+          <h2>Train your memory</h2>
+          <p>Each level adds one digit, so the challenge grows naturally. Your personal best is saved on this device and never leaves your browser.</p>
+        </article>
+      </section>
+    </main>
+    <footer><span>Digit Recall · Free to play</span><span>No sign-up. No downloads. Just focus.</span></footer>
+  </div>
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      const scoreEl = $('score');
+      const bestEl = $('best');
+      const phaseEl = $('phase');
+      const sequenceEl = $('sequence');
+      const timer = $('timer');
+      const timerFill = $('timer-fill');
+      const form = $('entry-form');
+      const answerInput = $('answer');
+      const startButton = $('start-button');
+      const submitButton = $('submit-button');
+      const hintEl = $('hint');
+      const bestKey = 'digit-recall-best-v1';
+      let score = 0;
+      let currentSequence = '';
+      let roundTimer = null;
+      let isShowing = false;
+
+      const readBest = () => {
+        try { return Math.max(0, Number(localStorage.getItem(bestKey)) || 0); }
+        catch { return 0; }
+      };
+      let best = readBest();
+      bestEl.textContent = best;
+
+      function setScore(value) {
+        score = value;
+        scoreEl.textContent = score;
+      }
+
+      function makeSequence(length) {
+        let value = '';
+        for (let i = 0; i < length; i += 1) value += Math.floor(Math.random() * 10);
+        return value;
+      }
+
+      function showEntry() {
+        isShowing = false;
+        timer.classList.add('hidden');
+        sequenceEl.classList.add('is-hidden');
+        sequenceEl.textContent = '•'.repeat(currentSequence.length);
+        sequenceEl.setAttribute('aria-label', 'Sequence hidden');
+        phaseEl.textContent = 'Your turn — enter the sequence';
+        form.classList.remove('hidden');
+        answerInput.value = '';
+        answerInput.maxLength = Math.max(30, currentSequence.length);
+        answerInput.focus({ preventScroll: true });
+        hintEl.textContent = 'Type the digits in the same order.';
+      }
+
+      function startRound() {
+        window.clearTimeout(roundTimer);
+        currentSequence = makeSequence(score + 3);
+        const displayMs = Math.min(5000, 3000 + Math.max(0, currentSequence.length - 3) * 250);
+        isShowing = true;
+        form.classList.add('hidden');
+        startButton.classList.add('hidden');
+        sequenceEl.classList.remove('is-hidden');
+        sequenceEl.textContent = currentSequence;
+        sequenceEl.setAttribute('aria-label', `Memorize ${currentSequence.length} digits`);
+        phaseEl.textContent = `Memorize these ${currentSequence.length} digits`;
+        hintEl.textContent = 'The number will disappear when time is up.';
+        timer.classList.remove('hidden');
+        timerFill.style.transition = 'none';
+        timerFill.style.transform = 'scaleX(1)';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            timerFill.style.transition = `transform ${displayMs}ms linear`;
+            timerFill.style.transform = 'scaleX(0)';
+          });
+        });
+        roundTimer = window.setTimeout(showEntry, displayMs);
+      }
+
+      function endGame() {
+        window.clearTimeout(roundTimer);
+        isShowing = false;
+        form.classList.add('hidden');
+        timer.classList.add('hidden');
+        sequenceEl.classList.remove('is-hidden');
+        sequenceEl.textContent = '✦';
+        sequenceEl.setAttribute('aria-label', 'Game over');
+        phaseEl.textContent = 'Game over';
+        hintEl.classList.add('error');
+        hintEl.textContent = `The sequence was ${currentSequence}. You recalled ${score} round${score === 1 ? '' : 's'}.`;
+        startButton.textContent = 'Play again';
+        startButton.classList.remove('hidden');
+        startButton.focus({ preventScroll: true });
+      }
+
+      startButton.addEventListener('click', () => {
+        hintEl.classList.remove('error');
+        hintEl.textContent = 'Get ready…';
+        setScore(0);
+        startButton.disabled = true;
+        window.setTimeout(() => {
+          startButton.disabled = false;
+          startRound();
+        }, 450);
+      });
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (isShowing) return;
+        const answer = answerInput.value.trim();
+        if (!/^\d+$/.test(answer)) {
+          hintEl.classList.add('error');
+          hintEl.textContent = 'Please enter the digits shown in the sequence.';
+          answerInput.focus();
+          return;
+        }
+        hintEl.classList.remove('error');
+        if (answer !== currentSequence) {
+          endGame();
+          return;
+        }
+        setScore(score + 1);
+        if (score > best) {
+          best = score;
+          bestEl.textContent = best;
+          try { localStorage.setItem(bestKey, String(best)); } catch { /* Storage may be unavailable. */ }
+        }
+        phaseEl.textContent = 'Correct! Get ready for the next level…';
+        hintEl.textContent = 'Nice work. The next sequence has one more digit.';
+        form.classList.add('hidden');
+        roundTimer = window.setTimeout(startRound, 900);
+      });
+    })();
+  </script>
+</body>
+</html>
