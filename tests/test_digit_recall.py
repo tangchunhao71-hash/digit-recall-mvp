@@ -18,18 +18,22 @@ const vm = require('node:vm');
 
 function createGame(options = {}) {
   const ids = [
-    'score', 'best', 'chances', 'phase', 'sequence', 'timer', 'timer-fill',
-    'entry-form', 'answer', 'start-button', 'submit-button', 'share-button', 'hint'
+    'page-content', 'score', 'best', 'chances', 'phase', 'sequence', 'timer', 'timer-fill',
+    'entry-form', 'answer', 'start-button', 'submit-button', 'share-button', 'hint',
+    'tutorial-trigger', 'tutorial', 'tutorial-step', 'tutorial-title', 'tutorial-copy',
+    'tutorial-sequence', 'tutorial-form', 'tutorial-answer', 'tutorial-feedback',
+    'tutorial-next', 'tutorial-skip'
   ];
-  const initiallyHidden = new Set(['timer', 'entry-form', 'share-button']);
+  const initiallyHidden = new Set(['timer', 'entry-form', 'share-button', 'tutorial', 'tutorial-form', 'tutorial-next']);
   const elements = Object.fromEntries(ids.map((id) => {
     const classes = new Set(initiallyHidden.has(id) ? ['hidden'] : []);
     return [id, {
       id,
-      textContent: '',
+      textContent: id === 'chances' ? '3 / 3' : '',
       value: '',
       maxLength: 30,
       disabled: false,
+      inert: false,
       style: {},
       attributes: {},
       listeners: {},
@@ -65,16 +69,19 @@ function createGame(options = {}) {
     prompt(message, value) { window.lastPrompt = { message, value }; },
     requestAnimationFrame(callback) { callback(); }
   };
+  const storageData = new Map();
+  if (options.savedBest !== undefined) storageData.set('digit-recall-best-v1', String(options.savedBest));
+  if (options.tutorialSeen !== false) storageData.set('digit-recall-tutorial-seen-v1', 'yes');
   const storage = {
-    value: options.savedBest ?? null,
+    data: storageData,
     writes: [],
-    getItem() {
+    getItem(key) {
       if (options.storageThrows) throw new Error('storage blocked');
-      return this.value;
+      return this.data.get(key) ?? null;
     },
     setItem(key, value) {
       if (options.storageThrows) throw new Error('storage blocked');
-      this.value = value;
+      this.data.set(key, value);
       this.writes.push([key, value]);
     }
   };
@@ -118,6 +125,34 @@ function createGame(options = {}) {
 async function main() {
   const source = require('node:fs').readFileSync(0, 'utf8');
 
+  const firstVisit = createGame({ source, tutorialSeen: false });
+  firstVisit.elements['start-button'].dispatch('click');
+  assert.equal(firstVisit.elements.tutorial.classList.contains('hidden'), false);
+  assert.equal(firstVisit.elements['page-content'].inert, true);
+  assert.equal(firstVisit.elements['tutorial-step'].textContent, 'Step 1 of 3');
+  assert.equal(firstVisit.advanceTimer(), 2200);
+  assert.equal(firstVisit.elements['tutorial-step'].textContent, 'Step 2 of 3');
+  assert.equal(firstVisit.elements['tutorial-form'].classList.contains('hidden'), false);
+  firstVisit.elements['tutorial-answer'].value = '000';
+  firstVisit.elements['tutorial-form'].dispatch('submit', { preventDefault() {} });
+  assert.equal(firstVisit.elements.chances.textContent, '3 / 3', 'tutorial mistakes must not spend chances');
+  assert.match(firstVisit.elements['tutorial-feedback'].textContent, /no chance is lost/);
+  firstVisit.elements['tutorial-answer'].value = '427';
+  firstVisit.elements['tutorial-form'].dispatch('submit', { preventDefault() {} });
+  assert.equal(firstVisit.elements['tutorial-step'].textContent, 'Step 3 of 3');
+  firstVisit.elements['tutorial-next'].dispatch('click');
+  assert.equal(firstVisit.elements.tutorial.classList.contains('hidden'), true);
+  assert.equal(firstVisit.elements['page-content'].inert, false);
+  assert.equal(firstVisit.storage.data.get('digit-recall-tutorial-seen-v1'), 'yes');
+  assert.equal(firstVisit.advanceTimer(), 450);
+  assert.equal(firstVisit.elements.sequence.textContent, '111', 'tutorial should lead into the real game');
+
+  const skippedTutorial = createGame({ source, tutorialSeen: false });
+  skippedTutorial.elements['start-button'].dispatch('click');
+  skippedTutorial.elements['tutorial-skip'].dispatch('click');
+  assert.equal(skippedTutorial.storage.data.get('digit-recall-tutorial-seen-v1'), 'yes');
+  assert.equal(skippedTutorial.advanceTimer(), 450, 'skip should start the real game immediately');
+
   const game = createGame({ source });
   game.startToEntry();
   game.submit('nope');
@@ -125,7 +160,7 @@ async function main() {
   game.submit('111');
   assert.equal(game.elements.score.textContent, 1);
   assert.equal(game.elements.best.textContent, 1);
-  assert.equal(game.storage.value, '1', 'new personal best should be saved');
+  assert.equal(game.storage.data.get('digit-recall-best-v1'), '1', 'new personal best should be saved');
   assert.equal(game.elements.chances.textContent, '3 / 3');
   assert.equal(game.advanceTimer(), 900);
   assert.equal(game.elements.sequence.textContent, '1111', 'each cleared level adds one digit');
@@ -199,6 +234,9 @@ class DigitRecallTests(unittest.TestCase):
         self.assertIn("You get three chances", self.html)
         self.assertIn("three chances", self.html.lower())
         self.assertIn('id="share-button"', self.html)
+        self.assertIn('role="dialog" aria-modal="true"', self.html)
+        self.assertIn('id="tutorial-form"', self.html)
+        self.assertIn("Try a guided practice", self.html)
         self.assertIn("@media (max-width: 520px)", self.html)
         self.assertIn('<meta name="theme-color" content="#fff8ec">', self.html)
         self.assertIn("color-scheme: light;", self.html)

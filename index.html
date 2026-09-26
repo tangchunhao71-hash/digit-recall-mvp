@@ -81,6 +81,25 @@
     .primary { min-width: 174px; min-height: 54px; margin-top: 6px; }
     .share-button { min-height: 46px; margin-top: 10px; padding: 0 18px; border: 1px solid #ded4ff; color: #6244cc; background: #f2edff; box-shadow: none; }
     .share-button:hover { background: #e9e1ff; box-shadow: none; }
+    .tutorial-trigger { min-height: 42px; margin-top: 13px; padding: 0 15px; border: 1px solid #ded4ff; color: #6244cc; background: #f2edff; box-shadow: none; font-size: .9rem; }
+    .tutorial-trigger:hover { background: #e9e1ff; box-shadow: none; }
+    .tutorial-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; overflow-y: auto; place-items: center; padding: 20px; background: rgba(52, 36, 83, .42); backdrop-filter: blur(7px); }
+    .tutorial-panel { width: min(100%, 450px); padding: 25px; border: 1px solid #ece5f3; border-radius: 26px; background: #fff; box-shadow: 0 24px 70px rgba(50, 35, 78, .22); text-align: center; }
+    .tutorial-top { display: flex; align-items: center; justify-content: space-between; }
+    .tutorial-badge { padding: 7px 11px; border-radius: 999px; color: #6849d6; background: #f0ebff; font-size: .72rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+    .tutorial-skip { min-height: 38px; padding: 0 12px; color: #766b8b; background: transparent; box-shadow: none; font-size: .86rem; }
+    .tutorial-skip:hover { color: #493778; background: #f7f4fb; box-shadow: none; }
+    .tutorial-step { margin: 18px 0 4px; color: #8a7da0; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .tutorial-panel h2 { margin: 0; color: #342453; font-size: 1.55rem; }
+    .tutorial-copy { min-height: 44px; margin: 8px auto 0; color: var(--muted); line-height: 1.5; }
+    .tutorial-sequence { display: grid; min-height: 84px; place-items: center; margin: 18px 0; border: 2px solid #fff; border-radius: 20px; color: #6848d7; background: linear-gradient(135deg, #f0eaff, #e9f7ff); box-shadow: inset 0 0 0 1px #e4dbff; font-size: 3rem; font-weight: 850; letter-spacing: .28em; font-variant-numeric: tabular-nums; }
+    .tutorial-sequence.is-hidden { color: #958aa8; background: #f6f3fa; }
+    .tutorial-sequence.is-success { color: #16845a; background: #e8fff3; box-shadow: inset 0 0 0 1px #c7f2dd; }
+    .tutorial-form { display: flex; width: 100%; gap: 9px; margin-top: 18px; }
+    .tutorial-form button { white-space: nowrap; }
+    .tutorial-feedback { min-height: 23px; margin: 12px 0 0; color: #746b89; font-size: .86rem; }
+    .tutorial-feedback.error { color: var(--danger); font-weight: 700; }
+    .tutorial-next { margin-top: 10px; }
     .hint { min-height: 21px; margin: 12px 0 0; color: var(--muted); font-size: .84rem; }
     .hint.error { color: var(--danger); font-weight: 700; }
     .hidden { display: none !important; }
@@ -102,6 +121,8 @@
       .entry { flex-direction: column; }
       .entry button { min-height: 50px; }
       .info-grid { grid-template-columns: 1fr; }
+      .tutorial-panel { padding: 21px 17px; border-radius: 22px; }
+      .tutorial-form { flex-direction: column; }
       footer { flex-direction: column; gap: 6px; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -110,7 +131,7 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap" id="page-content">
     <header>
       <a class="brand" href="#top" aria-label="Digit Recall home"><span class="brand-mark" aria-hidden="true">✦</span> Digit Recall</a>
       <span class="tag">A tiny workout for your brain</span>
@@ -147,6 +168,7 @@
         <article class="info-card">
           <h2>How to play</h2>
           <p>Memorize the digits while they’re on screen. Enter the sequence after it disappears. Each correct answer adds one digit; a miss costs one of your three chances, and you can retry that level.</p>
+          <button class="tutorial-trigger" id="tutorial-trigger" type="button">Try a guided practice</button>
         </article>
         <article class="info-card">
           <h2>Train your memory</h2>
@@ -156,9 +178,29 @@
     </main>
     <footer><span>Digit Recall · Free to play</span><span>No sign-up. No downloads. Just focus.</span></footer>
   </div>
+  <div class="tutorial-backdrop hidden" id="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-copy">
+    <section class="tutorial-panel">
+      <div class="tutorial-top">
+        <span class="tutorial-badge">Quick tutorial</span>
+        <button class="tutorial-skip" id="tutorial-skip" type="button">Skip</button>
+      </div>
+      <p class="tutorial-step" id="tutorial-step">Step 1 of 3</p>
+      <h2 id="tutorial-title">Look at the number</h2>
+      <p class="tutorial-copy" id="tutorial-copy">Remember these three digits. They’ll disappear in a moment.</p>
+      <div class="tutorial-sequence" id="tutorial-sequence" aria-label="Remember 4 2 7">427</div>
+      <form class="tutorial-form hidden" id="tutorial-form" autocomplete="off">
+        <label class="hidden" for="tutorial-answer">Type the three practice digits</label>
+        <input id="tutorial-answer" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="Type 3 digits" aria-label="Type the three practice digits">
+        <button type="submit">Check it</button>
+      </form>
+      <p class="tutorial-feedback" id="tutorial-feedback" aria-live="polite">Take a quick look…</p>
+      <button class="primary tutorial-next hidden" id="tutorial-next" type="button">Let’s play</button>
+    </section>
+  </div>
   <script>
     (() => {
       const $ = (id) => document.getElementById(id);
+      const pageContent = $('page-content');
       const scoreEl = $('score');
       const bestEl = $('best');
       const chancesEl = $('chances');
@@ -172,13 +214,27 @@
       const submitButton = $('submit-button');
       const shareButton = $('share-button');
       const hintEl = $('hint');
+      const tutorialTrigger = $('tutorial-trigger');
+      const tutorialOverlay = $('tutorial');
+      const tutorialStep = $('tutorial-step');
+      const tutorialTitle = $('tutorial-title');
+      const tutorialCopy = $('tutorial-copy');
+      const tutorialSequence = $('tutorial-sequence');
+      const tutorialForm = $('tutorial-form');
+      const tutorialAnswer = $('tutorial-answer');
+      const tutorialFeedback = $('tutorial-feedback');
+      const tutorialNext = $('tutorial-next');
+      const tutorialSkip = $('tutorial-skip');
       const bestKey = 'digit-recall-best-v1';
+      const tutorialKey = 'digit-recall-tutorial-seen-v1';
       const maxChances = 3;
       let score = 0;
       let chances = maxChances;
       let currentSequence = '';
       let roundTimer = null;
+      let tutorialTimer = null;
       let isShowing = false;
+      let gameActive = false;
 
       const readBest = () => {
         try { return Math.max(0, Number(localStorage.getItem(bestKey)) || 0); }
@@ -186,6 +242,12 @@
       };
       let best = readBest();
       bestEl.textContent = best;
+
+      function readTutorialSeen() {
+        try { return localStorage.getItem(tutorialKey) === 'yes'; }
+        catch { return true; }
+      }
+      let tutorialSeen = readTutorialSeen();
 
       function setScore(value) {
         score = value;
@@ -250,6 +312,8 @@
       function endGame() {
         window.clearTimeout(roundTimer);
         isShowing = false;
+        gameActive = false;
+        tutorialTrigger.disabled = false;
         form.classList.add('hidden');
         timer.classList.add('hidden');
         sequenceEl.classList.remove('is-hidden');
@@ -262,6 +326,80 @@
         startButton.classList.remove('hidden');
         shareButton.classList.remove('hidden');
         startButton.focus({ preventScroll: true });
+      }
+
+      function showTutorialInput() {
+        tutorialStep.textContent = 'Step 2 of 3';
+        tutorialTitle.textContent = 'Type it from memory';
+        tutorialCopy.textContent = 'Enter the three digits in the same order.';
+        tutorialSequence.classList.add('is-hidden');
+        tutorialSequence.textContent = '•••';
+        tutorialSequence.setAttribute('aria-label', 'Three digits hidden');
+        tutorialForm.classList.remove('hidden');
+        tutorialFeedback.classList.remove('error');
+        tutorialFeedback.textContent = 'No chances can be lost while you practice.';
+        tutorialAnswer.value = '';
+        tutorialAnswer.focus({ preventScroll: true });
+      }
+
+      function openTutorial() {
+        if (gameActive) return;
+        window.clearTimeout(tutorialTimer);
+        pageContent.inert = true;
+        tutorialOverlay.classList.remove('hidden');
+        tutorialStep.textContent = 'Step 1 of 3';
+        tutorialTitle.textContent = 'Look at the number';
+        tutorialCopy.textContent = 'Remember these three digits. They’ll disappear in a moment.';
+        tutorialSequence.classList.remove('is-hidden', 'is-success');
+        tutorialSequence.textContent = '427';
+        tutorialSequence.setAttribute('aria-label', 'Remember 4 2 7');
+        tutorialForm.classList.add('hidden');
+        tutorialNext.classList.add('hidden');
+        tutorialFeedback.classList.remove('error');
+        tutorialFeedback.textContent = 'Take a quick look…';
+        tutorialSkip.focus({ preventScroll: true });
+        tutorialTimer = window.setTimeout(showTutorialInput, 2200);
+      }
+
+      function finishTutorialPractice() {
+        window.clearTimeout(tutorialTimer);
+        tutorialStep.textContent = 'Step 3 of 3';
+        tutorialTitle.textContent = 'Nice — you got it!';
+        tutorialCopy.textContent = 'That’s the game loop: remember, type, then move up.';
+        tutorialSequence.classList.remove('is-hidden');
+        tutorialSequence.classList.add('is-success');
+        tutorialSequence.textContent = '✓';
+        tutorialSequence.setAttribute('aria-label', 'Practice complete');
+        tutorialForm.classList.add('hidden');
+        tutorialFeedback.classList.remove('error');
+        tutorialFeedback.textContent = 'Each clear adds a digit. You have 3 chances in a real run.';
+        tutorialNext.classList.remove('hidden');
+        tutorialNext.focus({ preventScroll: true });
+      }
+
+      function startAfterTutorial() {
+        window.clearTimeout(tutorialTimer);
+        tutorialSeen = true;
+        try { localStorage.setItem(tutorialKey, 'yes'); } catch { /* Tutorial remains usable without storage. */ }
+        tutorialOverlay.classList.add('hidden');
+        pageContent.inert = false;
+        beginGame();
+      }
+
+      function beginGame() {
+        gameActive = true;
+        tutorialTrigger.disabled = true;
+        hintEl.classList.remove('error');
+        hintEl.textContent = 'Get ready…';
+        setScore(0);
+        setChances(maxChances);
+        shareButton.classList.add('hidden');
+        startButton.classList.add('hidden');
+        startButton.disabled = true;
+        window.setTimeout(() => {
+          startButton.disabled = false;
+          startRound();
+        }, 450);
       }
 
       async function shareResult() {
@@ -290,17 +428,29 @@
       shareButton.addEventListener('click', shareResult);
 
       startButton.addEventListener('click', () => {
-        hintEl.classList.remove('error');
-        hintEl.textContent = 'Get ready…';
-        setScore(0);
-        setChances(maxChances);
-        shareButton.classList.add('hidden');
-        startButton.classList.add('hidden');
-        startButton.disabled = true;
-        window.setTimeout(() => {
-          startButton.disabled = false;
-          startRound();
-        }, 450);
+        if (!tutorialSeen) {
+          openTutorial();
+          return;
+        }
+        beginGame();
+      });
+
+      tutorialTrigger.addEventListener('click', openTutorial);
+      tutorialSkip.addEventListener('click', startAfterTutorial);
+      tutorialNext.addEventListener('click', startAfterTutorial);
+
+      tutorialForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const answer = tutorialAnswer.value.trim();
+        tutorialFeedback.classList.remove('error');
+        if (!/^\d+$/.test(answer) || answer !== '427') {
+          tutorialFeedback.classList.add('error');
+          tutorialFeedback.textContent = answer ? 'It was 427. Try again — no chance is lost.' : 'Type the number you saw. No chance is lost.';
+          tutorialAnswer.value = '';
+          tutorialAnswer.focus({ preventScroll: true });
+          return;
+        }
+        finishTutorialPractice();
       });
 
       form.addEventListener('submit', (event) => {
